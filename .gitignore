@@ -23,8 +23,7 @@
 hs_err_pid*
 replay_pid*
 
-# IDEA
+# IntelliJ
 .idea/
-
-# Compilation Folder
-out/
+/out/
+*.iml
