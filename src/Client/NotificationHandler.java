@@ -7,10 +7,10 @@ import java.net.SocketException;
 
 public class NotificationHandler implements Runnable{
     DatagramSocket socket;
-    public NotificationHandler()
+    public NotificationHandler(int port)
     {
         try{
-            socket = new DatagramSocket(5001);
+            socket = new DatagramSocket(port);
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }

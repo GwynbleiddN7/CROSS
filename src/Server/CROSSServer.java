@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,8 +13,10 @@ import java.util.concurrent.RejectedExecutionException;
 
 public class CROSSServer {
     private static final ExecutorService pool = Executors.newCachedThreadPool();
+    private static final ArrayList<Socket> socketList = new ArrayList<>();
     private static final String configFile = "server.properties";
-    private static int port;
+    private static int tcp_port;
+    public static int udp_port;
 
     public static void main(String[] args) {
         try {
@@ -23,13 +26,16 @@ public class CROSSServer {
             return;
         }
 
-        try(ServerSocket serverSocket = new ServerSocket(port))
+        LoginHandler.LoadData();
+
+        try(ServerSocket serverSocket = new ServerSocket(tcp_port))
         {
             while(true)
             {
                 try
                 {
                     Socket client = serverSocket.accept();
+                    socketList.add(client);
                     pool.execute(new ClientHandler(client));
                 }
                 catch (SocketException e)
@@ -53,7 +59,13 @@ public class CROSSServer {
 
         Properties prop = new Properties();
         prop.load(input);
-        port = Integer.parseInt(prop.getProperty("port"));
+        tcp_port = Integer.parseInt(prop.getProperty("TCP_port"));
+        udp_port = Integer.parseInt(prop.getProperty("UDP_port"));
         input.close();
+    }
+
+    public static void RemoveClient(Socket socket)
+    {
+        socketList.remove(socket);
     }
 }

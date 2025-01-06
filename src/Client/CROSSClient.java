@@ -15,7 +15,8 @@ import java.util.TimeZone;
 public class CROSSClient {
     private static final String configFile = "client.properties";
     private static String host;
-    private static int port;
+    private static int tcp_port;
+    private static int udp_port;
     private static final Scanner console = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -26,13 +27,13 @@ public class CROSSClient {
             return;
         }
 
-        try(Socket socket = new Socket(host, port))
+        try(Socket socket = new Socket(host, tcp_port))
         {
             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 
             Gson gson = new Gson();
-            NotificationHandler notificationHandler = new NotificationHandler();
+            NotificationHandler notificationHandler = new NotificationHandler(udp_port);
             Thread notificationThread = new Thread(notificationHandler);
             notificationThread.start();
 
@@ -113,6 +114,8 @@ public class CROSSClient {
                     time.setTimeZone(TimeZone.getTimeZone("GMT"));
                     SimpleDateFormat sdf = new SimpleDateFormat("MMM yyyy");
                     return new GetPriceHistory(sdf.format(time.getTime()));
+                case "test":
+                    return new Test();
                 default:
                     System.out.println("Comando sconosciuto");
                     break;
@@ -135,7 +138,8 @@ public class CROSSClient {
 
         Properties prop = new Properties();
         prop.load(input);
-        port = Integer.parseInt(prop.getProperty("port"));
+        tcp_port = Integer.parseInt(prop.getProperty("TCP_port"));
+        udp_port = Integer.parseInt(prop.getProperty("UDP_port"));
         host = prop.getProperty("host");
         input.close();
     }
