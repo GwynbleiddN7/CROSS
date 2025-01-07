@@ -1,18 +1,22 @@
 package Server;
 
 import Messages.*;
+import Orders.OrderBook;
+import Utility.OrderAction;
 import com.google.gson.*;
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
 
 public class ClientHandler implements Runnable{
     private final Socket client;
+    private final InetAddress clientAddress;
     private Credentials currentCredentials = null;
-    public ClientHandler(Socket client)
+    private final OrderBook orderBook;
+    public ClientHandler(Socket client, OrderBook orderBook)
     {
         this.client = client;
+        this.orderBook = orderBook;
+        this.clientAddress = client.getInetAddress();
     }
 
     public void run() {
@@ -46,7 +50,7 @@ public class ClientHandler implements Runnable{
             System.out.println("Errore nella comunicazione con il client");
         }
         finally {
-            CROSSServer.RemoveClient(client);
+            CROSSServer.RemoveClient(this);
         }
     }
 
@@ -64,8 +68,8 @@ public class ClientHandler implements Runnable{
 
             switch (operation)
             {
-                case "register":
-                    if(currentCredentials != null) response = 103;
+                case "register" -> {
+                    if (currentCredentials != null) response = 103;
                     else {
                         Registration registration = gson.fromJson(values, Registration.class);
                         response = LoginHandler.RegisterUser(registration.username, registration.password);
@@ -79,8 +83,8 @@ public class ClientHandler implements Runnable{
                         default -> "unknown error";
                     };
                     responseMessage = new Response(response, errorMessage);
-                    break;
-                case "updateCredentials":
+                }
+                case "updateCredentials" -> {
                     if(currentCredentials != null) response = 104;
                     else{
                         UpdateCredentials updateCredentials = gson.fromJson(values, UpdateCredentials.class);
@@ -96,8 +100,8 @@ public class ClientHandler implements Runnable{
                         default -> "unknown error";
                     };
                     responseMessage = new Response(response, errorMessage);
-                    break;
-                case "login":
+                }
+                case "login" -> {
                     if(currentCredentials != null) response = 102;
                     else{
                         Login login = gson.fromJson(values, Login.class);
@@ -113,24 +117,18 @@ public class ClientHandler implements Runnable{
                         default -> "unknown error";
                     };
                     responseMessage = new Response(response, errorMessage);
-                    break;
-                case "logout":
+                }
+                case "logout" -> {
+                    response = 101;
+
                     if(currentCredentials == null) {
-                        responseMessage = new Response(101, "user not logged in");
+                        responseMessage = new Response(response, "user not logged in");
                         break;
                     }
 
                     Logout logout = gson.fromJson(values, Logout.class);
-                    if(!LoginHandler.CheckUsername(logout.username))
-                    {
-                        response = 101;
-                        errorMessage = "username non existent";
-                    }
-                    else if(!logout.username.equals(currentCredentials.username))
-                    {
-                        response = 101;
-                        errorMessage = "username/connection mismatch";
-                    }
+                    if(!LoginHandler.CheckUsername(logout.username))  errorMessage = "username non existent";
+                    else if(!logout.username.equals(currentCredentials.username)) errorMessage = "username/connection mismatch";
                     else {
                         currentCredentials = null;
                         response = 100;
@@ -138,68 +136,58 @@ public class ClientHandler implements Runnable{
                     }
 
                     responseMessage = new Response(response, errorMessage);
-                    break;
-                case "insertLimitOrder":
+                }
+                case "insertLimitOrder" -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
                     }
                     InsertLimitOrder insertLimitOrder = gson.fromJson(values, InsertLimitOrder.class);
-                    responseMessage = new Response(101, "not yet implemented");
-                    break;
-                case "insertMarketOrder":
+                    int limitOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertLimitOrder.type, OrderAction.limit, insertLimitOrder.price, insertLimitOrder.size);
+                    responseMessage = new OrderResponse(limitOrderId);
+                }
+                case "insertMarketOrder" -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
                     }
                     InsertMarketOrder insertMarketOrder = gson.fromJson(values, InsertMarketOrder.class);
-                    responseMessage = new OrderResponse(-1);
-                    break;
-                case "insertStopOrder":
+                    int marketOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertMarketOrder.type, OrderAction.market, 0, insertMarketOrder.size);
+                    responseMessage = new OrderResponse(marketOrderId);
+                }
+                case "insertStopOrder" -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
                     }
                     InsertStopOrder insertStopOrder = gson.fromJson(values, InsertStopOrder.class);
-                    responseMessage = new OrderResponse(-1);
-                    break;
-                case "cancelOrder":
+                    int stopOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertStopOrder.type, OrderAction.stop, insertStopOrder.price, insertStopOrder.size);
+                    responseMessage = new OrderResponse(stopOrderId);
+                }
+                case "cancelOrder" -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
                     }
                     CancelOrder cancelOrder = gson.fromJson(values, CancelOrder.class);
-                    responseMessage = new Response(101, "not yet implemented");
-                    break;
-                case "getPriceHistory":
+                    int cancelledResult = orderBook.CancelOrder(currentCredentials.username, cancelOrder.orderId);
+                    errorMessage = switch (cancelledResult) {
+                        case 100 -> "OK";
+                        case 101 -> "order does not exist or has been finalized";
+                        case 102 -> "order belongs to a different user";
+                        default -> "unknown error";
+                    };
+                    responseMessage = new Response(Math.min(cancelledResult, 101), errorMessage);
+                }
+                case "getPriceHistory" -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
                     }
                     GetPriceHistory getPriceHistory = gson.fromJson(values, GetPriceHistory.class);
                     responseMessage = new Response(101, "not yet implemented");
-                    break;
-                case "test":
-                    try(DatagramSocket socket = new DatagramSocket(0)){
-                        InetSocketAddress host = new InetSocketAddress(client.getInetAddress(), CROSSServer.udp_port);
-
-                        try{
-                            byte[] msg = "testUdp".getBytes();
-                            DatagramPacket request = new DatagramPacket(msg, msg.length, host);
-                            socket.send(request);
-                        }
-                        catch (IOException e) {
-                            System.out.println("Error communicating with Server");
-                        }
-
-                    } catch (SocketException e) {
-                        System.out.println("Error with the socket");
-                    }
-                    responseMessage = new Response(100, "test UDP");
-                    break;
-                default:
-                    responseMessage = new Response(404, "command not found");
-                    break;
+                }
+                default -> responseMessage = new Response(404, "command not found");
             }
             return gson.toJson(responseMessage);
         }
@@ -207,5 +195,14 @@ public class ClientHandler implements Runnable{
         {
             return gson.toJson(new Response(400, "bad request"));
         }
+    }
+
+    public InetAddress GetAddressIfLogged(String username)
+    {
+        if(currentCredentials != null)
+        {
+            if(currentCredentials.username.equals(username)) return clientAddress;
+        }
+        return null;
     }
 }

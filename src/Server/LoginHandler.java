@@ -74,16 +74,16 @@ public class LoginHandler {
         return false;
     }
 
-    private static boolean WriteToFile()
+    private synchronized static boolean WriteToFile()
     {
         Gson gson = new Gson();
         String text = gson.toJson(credentials);
         File userFile = new File(pathFile);
         try{
             userFile.createNewFile();
-            FileWriter x = new FileWriter(userFile);
-            x.write(text);
-            x.close();
+            FileWriter writer = new FileWriter(userFile);
+            writer.write(text);
+            writer.close();
         } catch (IOException e) {
             return false;
         }

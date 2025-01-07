@@ -1,7 +1,10 @@
 package Server;
 
+import Orders.OrderBook;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -13,7 +16,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 public class CROSSServer {
     private static final ExecutorService pool = Executors.newCachedThreadPool();
-    private static final ArrayList<Socket> socketList = new ArrayList<>();
+    private static final ArrayList<ClientHandler> clientList = new ArrayList<>();
     private static final String configFile = "server.properties";
     private static int tcp_port;
     public static int udp_port;
@@ -27,6 +30,7 @@ public class CROSSServer {
         }
 
         LoginHandler.LoadData();
+        OrderBook orderBook = new OrderBook();
 
         try(ServerSocket serverSocket = new ServerSocket(tcp_port))
         {
@@ -35,8 +39,9 @@ public class CROSSServer {
                 try
                 {
                     Socket client = serverSocket.accept();
-                    socketList.add(client);
-                    pool.execute(new ClientHandler(client));
+                    ClientHandler handler = new ClientHandler(client, orderBook);
+                    clientList.add(handler);
+                    pool.execute(handler);
                 }
                 catch (SocketException e)
                 {
@@ -53,7 +58,7 @@ public class CROSSServer {
             System.out.println("Errore nella gestione del socket");
         }
     }
-    public static void readConfig() throws IOException {
+    private static void readConfig() throws IOException {
         InputStream input = CROSSServer.class.getResourceAsStream(configFile);
         if(input == null) throw new IOException();
 
@@ -64,8 +69,24 @@ public class CROSSServer {
         input.close();
     }
 
-    public static void RemoveClient(Socket socket)
+    public static void RemoveClient(ClientHandler handler)
     {
-        socketList.remove(socket);
+        synchronized (clientList)
+        {
+            clientList.remove(handler);
+        }
+    }
+
+    public static InetAddress GetClientAddressByUsername(String username)
+    {
+        synchronized (clientList)
+        {
+            for(ClientHandler handler : clientList)
+            {
+                InetAddress address = handler.GetAddressIfLogged(username);
+                if(address != null) return address;
+            }
+            return null;
+        }
     }
 }

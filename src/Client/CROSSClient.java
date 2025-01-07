@@ -2,7 +2,7 @@ package Client;
 
 import Messages.*;
 import Utility.OrderType;
-import Utility.ParameterError;
+import Utility.IncorrectParameterException;
 import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
@@ -84,38 +84,36 @@ public class CROSSClient {
             switch (parts[0].trim())
             {
                 case "register":
-                    if(params.length != 2) throw new ParameterError();
+                    if(params.length != 2) throw new IncorrectParameterException();
                     return new Registration(params[0], params[1]);
                 case "updateCredentials":
-                    if(params.length != 3) throw new ParameterError();
+                    if(params.length != 3) throw new IncorrectParameterException();
                     return new UpdateCredentials(params[0], params[1], params[2]);
                 case "login":
-                    if(params.length != 2) throw new ParameterError();
+                    if(params.length != 2) throw new IncorrectParameterException();
                     return new Login(params[0], params[1]);
                 case "logout":
-                    if(params.length != 1) throw new ParameterError();
+                    if(params.length != 1) throw new IncorrectParameterException();
                     return new Logout(params[0]);
                 case "insertLimitOrder":
-                    if(params.length != 3) throw new ParameterError();
+                    if(params.length != 3) throw new IncorrectParameterException();
                     return new InsertLimitOrder(OrderType.valueOf(params[0]), Integer.parseInt(params[1]), Integer.parseInt(params[2]));
                 case "insertMarketOrder":
-                    if(params.length != 2) throw new ParameterError();
+                    if(params.length != 2) throw new IncorrectParameterException();
                     return new InsertMarketOrder(OrderType.valueOf(params[0]), Integer.parseInt(params[1]));
                 case "insertStopOrder":
-                    if(params.length != 3) throw new ParameterError();
+                    if(params.length != 3) throw new IncorrectParameterException();
                     return new InsertStopOrder(OrderType.valueOf(params[0]), Integer.parseInt(params[1]), Integer.parseInt(params[2]));
                 case "cancelOrder":
-                    if(params.length != 1) throw new ParameterError();
+                    if(params.length != 1) throw new IncorrectParameterException();
                     return new CancelOrder(Integer.parseInt(params[0]));
                 case "getPriceHistory":
-                    if(params.length != 1) throw new ParameterError();
+                    if(params.length != 1) throw new IncorrectParameterException();
                     Calendar time = Calendar.getInstance();
                     time.set(Calendar.MONTH, Integer.parseInt(params[0]) - 1);
                     time.setTimeZone(TimeZone.getTimeZone("GMT"));
                     SimpleDateFormat sdf = new SimpleDateFormat("MMM yyyy");
                     return new GetPriceHistory(sdf.format(time.getTime()));
-                case "test":
-                    return new Test();
                 default:
                     System.out.println("Comando sconosciuto");
                     break;
@@ -125,7 +123,7 @@ public class CROSSClient {
         {
             System.out.println("Errore nel tipo di un parametro " + e.toString());
         }
-        catch (ArrayIndexOutOfBoundsException | ParameterError e)
+        catch (ArrayIndexOutOfBoundsException | IncorrectParameterException e)
         {
             System.out.println("Errore nel numero dei parametri del comando");
         }

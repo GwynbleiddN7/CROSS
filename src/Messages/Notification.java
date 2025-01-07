@@ -1,11 +1,11 @@
 package Messages;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class Notification {
-    public String notification = "closedTrades";
-    public ArrayList<Trade> trades;
-    public Notification(ArrayList<Trade> trades)
+    public final String notification = "closedTrades";
+    public List<Trade> trades;
+    public Notification(List<Trade> trades)
     {
         this.trades = trades;
     }
