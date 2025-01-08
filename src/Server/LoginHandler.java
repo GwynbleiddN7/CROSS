@@ -1,5 +1,6 @@
 package Server;
 
+import Utility.FileCreator;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.*;
@@ -42,7 +43,7 @@ public class LoginHandler {
 
         credentials.add(new Credentials(username, password));
 
-        if(WriteToFile()) return 100;
+        if(FileCreator.WriteToFile(pathFile, credentials)) return 100;
         else return 103;
     }
 
@@ -55,7 +56,7 @@ public class LoginHandler {
             if(cred.username.equals(username) && cred.password.equals(oldPassword))
             {
                 cred.password = newPassword;
-                WriteToFile();
+                FileCreator.WriteToFile(pathFile, credentials);
                 return 100;
             }
         }
@@ -72,21 +73,5 @@ public class LoginHandler {
             }
         }
         return false;
-    }
-
-    private synchronized static boolean WriteToFile()
-    {
-        Gson gson = new Gson();
-        String text = gson.toJson(credentials);
-        File userFile = new File(pathFile);
-        try{
-            userFile.createNewFile();
-            FileWriter writer = new FileWriter(userFile);
-            writer.write(text);
-            writer.close();
-        } catch (IOException e) {
-            return false;
-        }
-        return true;
     }
 }

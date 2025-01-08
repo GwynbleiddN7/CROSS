@@ -4,10 +4,7 @@ import Orders.OrderBook;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -43,14 +40,14 @@ public class CROSSServer {
                     clientList.add(handler);
                     pool.execute(handler);
                 }
-                catch (SocketException e)
-                {
-                    System.out.println("Errore nella connessione con il client");
-                    break;
-                }
                 catch (RejectedExecutionException e)
                 {
                     System.out.println("Capacità massima raggiunta");
+                }
+                catch (IOException e)
+                {
+                    System.out.println("Errore nella connessione con il client");
+                    break;
                 }
 
             }
@@ -77,13 +74,13 @@ public class CROSSServer {
         }
     }
 
-    public static InetAddress GetClientAddressByUsername(String username)
+    public static InetSocketAddress GetClientAddressByUsername(String username)
     {
         synchronized (clientList)
         {
             for(ClientHandler handler : clientList)
             {
-                InetAddress address = handler.GetAddressIfLogged(username);
+                InetSocketAddress address = handler.GetAddressIfLogged(username);
                 if(address != null) return address;
             }
             return null;

@@ -16,7 +16,6 @@ public class CROSSClient {
     private static final String configFile = "client.properties";
     private static String host;
     private static int tcp_port;
-    private static int udp_port;
     private static final Scanner console = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -33,7 +32,9 @@ public class CROSSClient {
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 
             Gson gson = new Gson();
-            NotificationHandler notificationHandler = new NotificationHandler(udp_port);
+            NotificationHandler notificationHandler = new NotificationHandler();
+            out.writeInt(notificationHandler.GetPort());
+
             Thread notificationThread = new Thread(notificationHandler);
             notificationThread.start();
 
@@ -137,7 +138,6 @@ public class CROSSClient {
         Properties prop = new Properties();
         prop.load(input);
         tcp_port = Integer.parseInt(prop.getProperty("TCP_port"));
-        udp_port = Integer.parseInt(prop.getProperty("UDP_port"));
         host = prop.getProperty("host");
         input.close();
     }

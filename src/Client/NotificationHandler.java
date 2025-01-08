@@ -6,11 +6,11 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 
 public class NotificationHandler implements Runnable{
-    DatagramSocket socket;
-    public NotificationHandler(int port)
+    private final DatagramSocket socket;
+    public NotificationHandler()
     {
         try{
-            socket = new DatagramSocket(port);
+            socket = new DatagramSocket(0);
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
@@ -19,6 +19,10 @@ public class NotificationHandler implements Runnable{
     public void stopListener()
     {
         socket.close();
+    }
+
+    public int GetPort(){
+        return socket.getLocalPort();
     }
 
     public void run() {

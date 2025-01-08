@@ -9,26 +9,29 @@ import java.net.*;
 
 public class ClientHandler implements Runnable{
     private final Socket client;
-    private final InetAddress clientAddress;
+    private final InetSocketAddress udpSocket;
     private Credentials currentCredentials = null;
     private final OrderBook orderBook;
-    public ClientHandler(Socket client, OrderBook orderBook)
-    {
+    private final DataOutputStream out;
+    private final DataInputStream in;
+    public ClientHandler(Socket client, OrderBook orderBook) throws IOException {
         this.client = client;
         this.orderBook = orderBook;
-        this.clientAddress = client.getInetAddress();
+
+        this.out = new DataOutputStream(new BufferedOutputStream(client.getOutputStream()));
+        this.in = new DataInputStream(new BufferedInputStream(client.getInputStream()));
+
+        int udpPort = in.readInt();
+        System.out.println(udpPort);
+        this.udpSocket = new InetSocketAddress(this.client.getInetAddress(), udpPort);
     }
 
     public void run() {
         try
         {
-            DataOutputStream out;
-            DataInputStream in;
+
             while(true)
             {
-                out = new DataOutputStream(new BufferedOutputStream(client.getOutputStream()));
-                in = new DataInputStream(new BufferedInputStream(client.getInputStream()));
-
                 int size = in.readInt();
                 byte[] buff = new byte[size];
                 int len = in.read(buff, 0, size);
@@ -197,11 +200,11 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    public InetAddress GetAddressIfLogged(String username)
+    public InetSocketAddress GetAddressIfLogged(String username)
     {
         if(currentCredentials != null)
         {
-            if(currentCredentials.username.equals(username)) return clientAddress;
+            if(currentCredentials.username.equals(username)) return udpSocket;
         }
         return null;
     }

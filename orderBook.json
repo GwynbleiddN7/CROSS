@@ -1,0 +1,1 @@
+{"stop":{"bid":[],"ask":[]},"limit":{"bid":[{"username":"ciao","orderId":0,"type":"bid","size":50,"price":50}],"ask":[{"username":"ciao","orderId":0,"type":"ask","size":10,"price":60},{"username":"ciao","orderId":0,"type":"ask","size":0,"price":10},{"username":"ciao","orderId":0,"type":"ask","size":0,"price":10}]}}

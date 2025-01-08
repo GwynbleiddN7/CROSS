@@ -2,53 +2,79 @@ package Orders;
 
 import Utility.OrderType;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class OrderRecord {
-    ArrayList<Order> ask;
-    ArrayList<Order> bid;
+public class OrderRecord extends ConcurrentHashMap<OrderType, List<Order>>{
 
     public OrderRecord()
     {
-        ask = new ArrayList<>();
-        bid = new ArrayList<>();
+        super();
+        this.put(OrderType.ask, Collections.synchronizedList(new ArrayList<>()));
+        this.put(OrderType.bid, Collections.synchronizedList(new ArrayList<>()));
+    }
+
+    public OrderRecord(OrderRecord oldRecord)
+    {
+        super();
+        this.put(OrderType.ask, Collections.synchronizedList(oldRecord.get(OrderType.ask)));
+        this.put(OrderType.bid, Collections.synchronizedList(oldRecord.get(OrderType.bid)));
     }
 
     public void AddOrder(Order newOrder)
     {
         int index = 0;
+        List<Order> orderList;
         if(newOrder.type == OrderType.ask){
-            for(Order order : ask)
+            orderList = this.get(OrderType.ask);
+            for(Order order : orderList)
             {
-                if(order.price == newOrder.price) {
-                    order.size += newOrder.size;
-                    return;
-                }
-                else if(order.price < newOrder.price) {
-                    index = ask.indexOf(order);
+                if(order.price < newOrder.price) {
+                    index = orderList.indexOf(order);
                     break;
                 }
             }
-            ask.add(index, newOrder);
         }
         else{
-            for(Order order : bid)
+            orderList = this.get(OrderType.bid);
+            for(Order order : orderList)
             {
-                if(order.price == newOrder.price) {
-                    order.size += newOrder.size;
-                    return;
-                }
-                else if(order.price > newOrder.price) {
-                    index = bid.indexOf(order);
+                if(order.price > newOrder.price) {
+                    index = orderList.indexOf(order);
                     break;
                 }
             }
-            bid.add(index, newOrder);
         }
+        orderList.add(index, newOrder);
     }
 
-    public void RemoveOrder(Order oldOrder)
+    public synchronized int RemoveOrderById(int orderId, String username)
     {
-        if(oldOrder.type == OrderType.ask) ask.remove(oldOrder);
-        else bid.remove(oldOrder);
+        for(List<Order> orderList : this.values())
+        {
+            for(Order order : orderList)
+            {
+                if(order.orderId == orderId)
+                {
+                    if(username.equals(order.username))
+                    {
+                        orderList.remove(order);
+                        return 100;
+                    }
+                    else return 102;
+                }
+            }
+        }
+        return 101;
+    }
+
+    public boolean RemoveOrder(Order oldOrder)
+    {
+        return this.get(oldOrder.type).remove(oldOrder);
+    }
+
+    public void RemoveAll(List<Order> ordersToRemove, OrderType type) {
+        this.get(type).removeAll(ordersToRemove);
     }
 }
