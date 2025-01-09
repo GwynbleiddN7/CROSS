@@ -1,52 +1,26 @@
 package Orders;
 
 import Utility.OrderType;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class OrderRecord extends ConcurrentHashMap<OrderType, List<Order>>{
-
-    public OrderRecord()
-    {
-        super();
-        this.put(OrderType.ask, Collections.synchronizedList(new ArrayList<>()));
-        this.put(OrderType.bid, Collections.synchronizedList(new ArrayList<>()));
-    }
-
-    public OrderRecord(OrderRecord oldRecord)
-    {
-        super();
-        this.put(OrderType.ask, Collections.synchronizedList(oldRecord.get(OrderType.ask)));
-        this.put(OrderType.bid, Collections.synchronizedList(oldRecord.get(OrderType.bid)));
-    }
-
-    public void AddOrder(Order newOrder)
+    public synchronized void AddOrder(Order newOrder)
     {
         int index = 0;
-        List<Order> orderList;
-        if(newOrder.type == OrderType.ask){
-            orderList = this.get(OrderType.ask);
-            for(Order order : orderList)
-            {
-                if(order.price < newOrder.price) {
-                    index = orderList.indexOf(order);
-                    break;
-                }
-            }
-        }
-        else{
-            orderList = this.get(OrderType.bid);
-            for(Order order : orderList)
-            {
-                if(order.price > newOrder.price) {
-                    index = orderList.indexOf(order);
-                    break;
-                }
-            }
+        List<Order> orderList = this.get(newOrder.type);
+
+        for(; index < orderList.size(); index++)
+        {
+            if(compareOrder(newOrder, orderList.get(index))) break;
         }
         orderList.add(index, newOrder);
+    }
+
+    private boolean compareOrder(Order newOrder, Order listOrder)
+    {
+        if(newOrder.type == OrderType.ask) return newOrder.price < listOrder.price;
+        else return newOrder.price > listOrder.price;
     }
 
     public synchronized int RemoveOrderById(int orderId, String username)
@@ -69,12 +43,7 @@ public class OrderRecord extends ConcurrentHashMap<OrderType, List<Order>>{
         return 101;
     }
 
-    public boolean RemoveOrder(Order oldOrder)
-    {
-        return this.get(oldOrder.type).remove(oldOrder);
-    }
-
-    public void RemoveAll(List<Order> ordersToRemove, OrderType type) {
+    public synchronized void RemoveAll(List<Order> ordersToRemove, OrderType type) {
         this.get(type).removeAll(ordersToRemove);
     }
 }

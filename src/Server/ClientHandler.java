@@ -22,38 +22,46 @@ public class ClientHandler implements Runnable{
         this.in = new DataInputStream(new BufferedInputStream(client.getInputStream()));
 
         int udpPort = in.readInt();
-        System.out.println(udpPort);
         this.udpSocket = new InetSocketAddress(this.client.getInetAddress(), udpPort);
+
+        this.client.setSoTimeout(1000 * 5 * 60); // timeout 5 minutes
     }
 
     public void run() {
         try
         {
-
             while(true)
             {
-                int size = in.readInt();
-                byte[] buff = new byte[size];
-                int len = in.read(buff, 0, size);
-                String answer = new String(buff, 0, len);
+                try
+                {
+                    int size = in.readInt();
+                    byte[] buff = new byte[size];
+                    int len = in.read(buff, 0, size);
 
-                if(answer.equals("EXIT")) break;
-                String response = parseMessage(answer);
+                    String answer = new String(buff, 0, len);
+                    if(answer.equals("EXIT")) break;
+                    String response = parseMessage(answer);
 
-                out.writeInt(response.length());
-                out.writeBytes(response);
-                out.flush();
+                    out.writeInt(response.length());
+                    out.writeBytes(response);
+                    out.flush();
+                }
+                catch (SocketTimeoutException _)
+                {
+                    currentCredentials = null;
+                }
             }
             out.close();
             in.close();
             client.close();
         }
-        catch (IOException e)
+        catch (IOException _)
         {
             System.out.println("Errore nella comunicazione con il client");
         }
         finally {
-            CROSSServer.RemoveClient(this);
+            currentCredentials = null;
+            ServerMain.RemoveClient(this);
         }
     }
 

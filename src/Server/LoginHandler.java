@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class LoginHandler {
@@ -17,10 +16,10 @@ public class LoginHandler {
         try{
             Gson gson = new Gson();
             TypeToken<ArrayList<Credentials>> gsonType = new TypeToken<>(){};
-            credentials = Collections.synchronizedList(gson.fromJson(new FileReader(userFile), gsonType));
+            credentials = gson.fromJson(new FileReader(userFile), gsonType);
 
         } catch (Exception _) {
-            credentials = Collections.synchronizedList(new ArrayList<>());
+            credentials = new ArrayList<>();
         }
     }
 

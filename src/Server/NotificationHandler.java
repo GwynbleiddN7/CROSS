@@ -9,27 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NotificationHandler {
-    private static final Gson gson = new Gson();
-    private static void Send(Notification notification, InetSocketAddress address)
-    {
-        try(DatagramSocket socket = new DatagramSocket()){
-
-            try{
-                String stringMessage = gson.toJson(notification);
-                byte[] msg = stringMessage.getBytes();
-                DatagramPacket request = new DatagramPacket(msg, msg.length, address);
-                socket.send(request);
-                System.out.println(notification);
-            }
-            catch (IOException e) {
-                System.out.println("Error communicating with Server");
-            }
-
-        } catch (SocketException e) {
-            System.out.println("Error with the socket");
-        }
-    }
-
     public static void Send(ArrayList<Trade> trades)
     {
         ArrayList<String> usernames = new ArrayList<>();
@@ -43,12 +22,28 @@ public class NotificationHandler {
         //Group notification per user
         for(String username: usernames)
         {
-
-            InetSocketAddress address = CROSSServer.GetClientAddressByUsername(username);
+            InetSocketAddress address = ServerMain.GetClientAddressByUsername(username);
             if(address == null) continue; //Best-Effort
             List<Trade> tradesPerUser = trades.stream().filter(order -> order.username.equals(username)).toList();
             Notification notification = new Notification(tradesPerUser);
             Send(notification, address);
+        }
+    }
+    private static void Send(Notification notification, InetSocketAddress address)
+    {
+        try(DatagramSocket socket = new DatagramSocket()){
+            try{
+                Gson gson = new Gson();
+                String stringMessage = gson.toJson(notification);
+                byte[] msg = stringMessage.getBytes();
+                DatagramPacket request = new DatagramPacket(msg, msg.length, address);
+                socket.send(request);
+            }
+            catch (IOException e) {
+                System.out.println("Error communicating with Server");
+            }
+        } catch (SocketException e) {
+            System.out.println("Error with the socket");
         }
     }
 }

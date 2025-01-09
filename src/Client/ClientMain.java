@@ -12,7 +12,7 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.TimeZone;
 
-public class CROSSClient {
+public class ClientMain {
     private static final String configFile = "client.properties";
     private static String host;
     private static int tcp_port;
@@ -44,7 +44,7 @@ public class CROSSClient {
                 System.out.print(">");
                 String input = console.nextLine();
 
-                if(input.equals("EXIT"))
+                if(input.equals("exit"))
                 {
                     out.writeInt(input.length());
                     out.writeBytes(input);
@@ -64,9 +64,21 @@ public class CROSSClient {
                 int size = in.readInt();
                 byte[] buff = new byte[size];
                 int len = in.read(buff, 0, size);
-
                 String answer = new String(buff, 0, len);
-                System.out.println(answer);
+                System.out.printf("RAW MESSAGE: [%s]\n", answer);
+
+                JsonElement element = JsonParser.parseString(answer);
+                if(element.getAsJsonObject().get("orderId") != null)
+                {
+                    OrderResponse orderResponse = gson.fromJson(answer, OrderResponse.class);
+                    if(orderResponse.orderId == -1) System.out.println("Non è stato possibile effetuare l'ordine");
+                    else System.out.printf("Ordine %d piazzato con successo\n", orderResponse.orderId);
+                }
+                else if(element.getAsJsonObject().get("response") != null)
+                {
+                    Response responseMessage = gson.fromJson(answer, Response.class);
+                    System.out.printf("Risposta %d: %s\n", responseMessage.response, responseMessage.errorMessage);
+                }
             }
             notificationHandler.stopListener();
             out.close();
@@ -122,7 +134,7 @@ public class CROSSClient {
         }
         catch (IllegalArgumentException e)
         {
-            System.out.println("Errore nel tipo di un parametro " + e.toString());
+            System.out.println("Errore nel tipo di un parametro ");
         }
         catch (ArrayIndexOutOfBoundsException | IncorrectParameterException e)
         {
@@ -131,8 +143,10 @@ public class CROSSClient {
         return null;
     }
 
-    public static void readConfig() throws IOException {
-        InputStream input = CROSSClient.class.getResourceAsStream(configFile);
+
+
+    private static void readConfig() throws IOException {
+        InputStream input = ClientMain.class.getResourceAsStream(configFile);
         if(input == null) throw new IOException();
 
         Properties prop = new Properties();

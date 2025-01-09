@@ -6,14 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
-public class CROSSServer {
+public class ServerMain {
     private static final ExecutorService pool = Executors.newCachedThreadPool();
-    private static final ArrayList<ClientHandler> clientList = new ArrayList<>();
+    private static final List<ClientHandler> clientList = Collections.synchronizedList(new ArrayList<>());
     private static final String configFile = "server.properties";
     private static int tcp_port;
     public static int udp_port;
@@ -28,9 +30,11 @@ public class CROSSServer {
 
         LoginHandler.LoadData();
         OrderBook orderBook = new OrderBook();
+        orderBook.LoadData();
 
         try(ServerSocket serverSocket = new ServerSocket(tcp_port))
         {
+            System.out.println("Server ready");
             while(true)
             {
                 try
@@ -56,7 +60,7 @@ public class CROSSServer {
         }
     }
     private static void readConfig() throws IOException {
-        InputStream input = CROSSServer.class.getResourceAsStream(configFile);
+        InputStream input = ServerMain.class.getResourceAsStream(configFile);
         if(input == null) throw new IOException();
 
         Properties prop = new Properties();
@@ -68,10 +72,7 @@ public class CROSSServer {
 
     public static void RemoveClient(ClientHandler handler)
     {
-        synchronized (clientList)
-        {
-            clientList.remove(handler);
-        }
+        clientList.remove(handler);
     }
 
     public static InetSocketAddress GetClientAddressByUsername(String username)

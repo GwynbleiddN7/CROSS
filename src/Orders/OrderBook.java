@@ -2,11 +2,9 @@ package Orders;
 
 import Messages.Trade;
 import Server.NotificationHandler;
-import Utility.FileCreator;
-import Utility.OrderAction;
-import Utility.OrderFailedException;
-import Utility.OrderType;
+import Utility.*;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import java.io.File;
 import java.io.FileReader;
 import java.util.*;
@@ -14,27 +12,59 @@ import java.util.*;
 public class OrderBook {
     private OrderRecord stop;
     private OrderRecord limit;
-    private static final String pathFile = "orderBook.json";
+    private static final String logsFile = "ordersLog.json";
+    private static final String orderBookFile = "orderBook.json";
+    private transient int maxId = -1;
+    private transient List<Trade> logs;
 
-    public OrderBook()
+    public void LoadData()
     {
-        File orderBookFile = new File(pathFile);
+        LoadBook();
+        LoadLogs();
+
+        //Find next order id
+        for(List<Order> orders : limit.values())
+            orders.stream().max(Comparator.comparingInt(order -> order.orderId)).ifPresent(value -> maxId = Math.max(value.orderId, maxId));
+        for(List<Order> orders : stop.values())
+            orders.stream().max(Comparator.comparingInt(order -> order.orderId)).ifPresent(value -> maxId = Math.max(value.orderId, maxId));
+        logs.stream().max(Comparator.comparingInt(order -> order.orderId)).ifPresent(value -> maxId = Math.max(value.orderId, maxId));
+        maxId++;
+    }
+
+    private void LoadBook()
+    {
+        File orderBookFile = new File(OrderBook.orderBookFile);
         try{
             Gson gson = new Gson();
             OrderBook savedBook = gson.fromJson(new FileReader(orderBookFile), OrderBook.class);
 
-            stop = new OrderRecord(savedBook.stop);
-            limit = new OrderRecord(savedBook.limit);
+            stop = savedBook.stop;
+            limit = savedBook.limit;
 
-        } catch (Exception _) {
+        } catch (Exception e) {
             stop = new OrderRecord();
             limit = new OrderRecord();
         }
     }
 
+    private void LoadLogs()
+    {
+        File logsFile = new File(OrderBook.logsFile);
+        try{
+            Gson gson = new Gson();
+            TypeToken<List<Trade>> type = new TypeToken<>(){};
+            List<Trade> logs = gson.fromJson(new FileReader(logsFile), type);
+
+            this.logs = Collections.synchronizedList(logs);
+
+        } catch (Exception e) {
+            this.logs = Collections.synchronizedList(new ArrayList<>());
+        }
+    }
+
     public synchronized int InsertNewOrder(String username, OrderType type, OrderAction orderType, int price, int size)
     {
-        Order newOrder = new Order(username, type, price, size);
+        Order newOrder = new Order(maxId, username, type, price, size);
         int result = newOrder.orderId;
         switch (orderType)
         {
@@ -48,22 +78,29 @@ public class OrderBook {
                 result = executeStopOrder(newOrder);
             }
         }
-        checkForUpdate();
-        FileCreator.WriteToFile(pathFile, this);
+        if(result != -1) maxId++;
+        OrderBookModified();
         return result;
     }
 
     public synchronized int CancelOrder(String username, int orderId)
     {
-        int result = limit.RemoveOrderById(orderId, username);
-        if(result != 101) return result;
+        int resultLimit = limit.RemoveOrderById(orderId, username);
+        int resultStop = stop.RemoveOrderById(orderId, username);
 
-        result = stop.RemoveOrderById(orderId, username);
-         return result;
+        OrderBookModified();
+        return resultLimit != 101 ? resultLimit : resultStop;
+    }
+
+    private void OrderBookModified()
+    {
+        checkForUpdate();
+        FileCreator.WriteToFile(orderBookFile, this);
+        FileCreator.WriteToFile(logsFile, logs);
     }
 
 
-    private synchronized int executeMarketOrder(Order order, boolean fromStopOrder)
+    private int executeMarketOrder(Order order, boolean fromStopOrder)
     {
         ArrayList<Trade> logs = new ArrayList<>(); //Users to notify
 
@@ -72,7 +109,9 @@ public class OrderBook {
 
             Trade log = new Trade(order.username, order.orderId, order.type, fromStopOrder ? OrderAction.stop : OrderAction.market, order.size, order.price, new Date().getTime());
             logs.add(log);
+
             NotificationHandler.Send(logs);
+            AddLogs(logs);
 
             return order.orderId;
         }
@@ -82,39 +121,40 @@ public class OrderBook {
         }
     }
 
-    private synchronized void calculateMarketOrder(Order order, ArrayList<Trade> logs) throws OrderFailedException
+    private void calculateMarketOrder(Order order, ArrayList<Trade> logs) throws OrderFailedException
     {
+        List<Order> ordersToInteract = new ArrayList<>();
         List<Order> ordersToRemove = new ArrayList<>();
-        List<Order> availableOrders = limit.get(order.type == OrderType.ask ? OrderType.bid : OrderType.ask);
+        OrderType ordersType = order.type == OrderType.ask ? OrderType.bid : OrderType.ask;
+
+        List<Order> availableOrders = limit.get(ordersType);
         //Check if the order can be completed
         int neededSize = order.size;
-        for(Order availableOrder : availableOrders) {
+        for(Order availableOrder : availableOrders) { //Orders already sorted in the correct way
             if(order.username.equals(availableOrder.username)) continue;
             neededSize -= availableOrder.size;
+            ordersToInteract.add(availableOrder);
+            if(neededSize >= 0) ordersToRemove.add(availableOrder);
+            if(neededSize <= 0) break;
         }
         if(neededSize > 0) throw new OrderFailedException(); //There aren't enough bid orders to complete the order
 
         //Execute the operation that will complete
-        for(Order availableOrder : availableOrders)
+        for(Order interactionOrder : ordersToInteract)
         {
-            if(order.username.equals(availableOrder.username)) continue;
+            int size = Math.min(interactionOrder.size, order.size);
+            order.price += size * interactionOrder.price;
 
-            int size = Math.min(availableOrder.size, order.size);
-            order.price += size * availableOrder.price;
-
-            Trade log = new Trade(availableOrder.username, availableOrder.orderId, availableOrder.type, OrderAction.limit, size, size * availableOrder.price, new Date().getTime());
+            Trade log = new Trade(interactionOrder.username, interactionOrder.orderId, interactionOrder.type, OrderAction.limit, size, size * interactionOrder.price, new Date().getTime());
             logs.add(log); //Log for Notification and for JSON Dump
 
-            availableOrder.size -= size;
-            if(availableOrder.size <= 0) {
-                ordersToRemove.add(availableOrder); //Flag to remove if completed
-            }
+            interactionOrder.size -= size;
         }
-        limit.RemoveAll(ordersToRemove, order.type);
+        limit.RemoveAll(ordersToRemove, ordersType);
     }
 
-    private synchronized int executeStopOrder(Order newOrder) {
-        if(comparePrice(newOrder))
+    private int executeStopOrder(Order newOrder) {
+        if(checkStopTrigger(newOrder))
             return convertStopOrder(newOrder);
         else{
             stop.AddOrder(newOrder);
@@ -122,20 +162,20 @@ public class OrderBook {
         }
     }
 
-    private synchronized int convertStopOrder(Order newOrder)
+    private int convertStopOrder(Order newOrder)
     {
         newOrder.price = 0;
         return executeMarketOrder(newOrder, true);
     }
 
-    private synchronized void checkStopOrder()
+    private void checkStopOrder()
     {
         List<Order> ordersToRemove = new ArrayList<>();
         for(List<Order> orders : stop.values())
         {
             for(Order stopOrder : orders)
             {
-                if(comparePrice(stopOrder))
+                if(checkStopTrigger(stopOrder))
                 {
                     convertStopOrder(stopOrder);
                     ordersToRemove.add(stopOrder);
@@ -145,44 +185,91 @@ public class OrderBook {
         }
     }
 
-    private synchronized void checkForUpdate()
+    private boolean checkStopTrigger(Order order)
     {
-        checkStopOrder();
-        matchLimitOrders();
+        try{
+            if(order.type == OrderType.ask)
+            {
+                return getMarketPrice(OrderType.bid, order.username) <= order.price; //if market price drops under selling stop price
+            }
+            else
+            {
+                return getMarketPrice(OrderType.ask, order.username) >= order.price; //if market price overcomes buying stop price
+            }
+        }catch (EmptyMarketException _)
+        {
+            return false; //If market is empty the stop order will fail
+        }
     }
 
-    private synchronized int executeLimitOrder(Order newOrder) {
+    private int getMarketPrice(OrderType type, String username) throws EmptyMarketException
+    {
+        try{
+            return limit.get(type).stream().filter(order -> !order.username.equals(username)).toList().getFirst().price;
+        }
+        catch (NoSuchElementException _) {
+            throw new EmptyMarketException();
+        }
+    }
+
+    private int executeLimitOrder(Order newOrder) {
         limit.AddOrder(newOrder);
         return newOrder.orderId;
     }
 
-    private synchronized void matchLimitOrders()
+    private void matchLimitOrders()
     {
+        HashMap<OrderType, ArrayList<Order>> ordersToRemove = new HashMap<>();
+        ArrayList<Trade> logs = new ArrayList<>();
+        ordersToRemove.put(OrderType.ask, new ArrayList<>());
+        ordersToRemove.put(OrderType.bid, new ArrayList<>());
 
+        for(Order bidOrder : limit.get(OrderType.bid))
+        {
+            for(Order askOrder : limit.get(OrderType.ask))
+            {
+                if(askOrder.username.equals(bidOrder.username)) continue;
+
+                int size = 0;
+                int price = 0;
+                if(bidOrder.price >= askOrder.price)
+                {
+                    size = Math.min(askOrder.size, bidOrder.size);
+                    askOrder.size -= size;
+                    bidOrder.size -= size;
+                    price = askOrder.timestamp <= bidOrder.timestamp ? askOrder.price : bidOrder.price;
+                    if(askOrder.size <= 0) ordersToRemove.get(OrderType.ask).add(askOrder);
+                    if(bidOrder.size <= 0) ordersToRemove.get(OrderType.bid).add(bidOrder);
+                }
+                if(size > 0)
+                {
+                    logs.add(createLimitLog(askOrder, size, price));
+                    logs.add(createLimitLog(bidOrder, size, price));
+                }
+                if(bidOrder.size <= 0) break;
+            }
+            limit.RemoveAll(ordersToRemove.get(OrderType.ask), OrderType.ask);
+            ordersToRemove.get(OrderType.ask).clear();
+        }
+        limit.RemoveAll(ordersToRemove.get(OrderType.bid), OrderType.bid);
+
+        NotificationHandler.Send(logs);
+        AddLogs(logs);
     }
 
-    private synchronized int getMarketPrice(OrderType type)
+    private Trade createLimitLog(Order order, int size, int price)
     {
-        try{
-            if(type == OrderType.ask)
-                return limit.get(OrderType.bid).getFirst().price;
-            else
-                return limit.get(OrderType.ask).getFirst().price;
-        }
-        catch (NoSuchElementException _) {
-            return type == OrderType.ask ? Integer.MAX_VALUE : Integer.MIN_VALUE;
-        }
+        return new Trade(order.username, order.orderId, order.type, OrderAction.limit, size, size * price, new Date().getTime());
     }
 
-    private synchronized boolean comparePrice(Order order)
+    private void checkForUpdate()
     {
-        if(order.type == OrderType.ask)
-        {
-            return order.price >= getMarketPrice(order.type);
-        }
-        else
-        {
-            return order.price <= getMarketPrice(order.type);
-        }
+        checkStopOrder();
+        matchLimitOrders();
+        checkStopOrder();
+    }
+
+    private void AddLogs(ArrayList<Trade> logs) {
+        this.logs.addAll(0, logs);
     }
 }
