@@ -1,7 +1,7 @@
 package Server;
 
-import Messages.Notification;
-import Messages.Trade;
+import ServerToClient.Notification;
+import Orders.Trade;
 import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.*;
@@ -40,10 +40,10 @@ public class NotificationHandler {
                 socket.send(request);
             }
             catch (IOException e) {
-                System.out.println("Error communicating with Server");
+                System.out.println("Errore di comunicazione con il server");
             }
         } catch (SocketException e) {
-            System.out.println("Error with the socket");
+            System.out.println("Errore nella gestione del socket");
         }
     }
 }

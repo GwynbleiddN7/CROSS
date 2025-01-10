@@ -1,10 +1,11 @@
-package Messages;
+package ClientToServer;
+import Utility.Operation;
 import Utility.OrderType;
 
 public class InsertLimitOrder extends MessageType{
-    public OrderType type;
-    public int size;
-    public int price;
+    public final OrderType type;
+    public final int size;
+    public final int price;
     public InsertLimitOrder(OrderType type, int size, int price)
     {
         this.type = type;
@@ -12,8 +13,8 @@ public class InsertLimitOrder extends MessageType{
         this.price = price;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "insertLimitOrder";
+        return Operation.insertLimitOrder;
     }
 }

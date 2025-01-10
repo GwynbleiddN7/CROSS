@@ -1,11 +1,12 @@
-package Messages;
+package ClientToServer;
 
+import Utility.Operation;
 import Utility.OrderType;
 
 public class InsertStopOrder extends MessageType{
-    public OrderType type;
-    public int size;
-    public int price;
+    public final OrderType type;
+    public final int size;
+    public final int price;
     public InsertStopOrder(OrderType type, int size, int price)
     {
         this.type = type;
@@ -13,8 +14,8 @@ public class InsertStopOrder extends MessageType{
         this.price = price;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "insertStopOrder";
+        return Operation.insertStopOrder;
     }
 }

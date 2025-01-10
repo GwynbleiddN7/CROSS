@@ -5,12 +5,13 @@ import Utility.OrderType;
 import java.util.Date;
 
 public class Order {
-    public String username;
-    public int orderId;
-    public OrderType type;
+    public final String username;
+    public final int orderId;
+    public final OrderType type;
+    public final long timestamp;
+
     public int size;
     public int price;
-    public long timestamp;
     public Order(int orderId, String username, OrderType type, int price, int size)
     {
         this.username = username;

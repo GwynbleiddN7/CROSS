@@ -1,7 +1,6 @@
 package Server;
 
 import Orders.OrderBook;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
@@ -46,7 +45,7 @@ public class ServerMain {
                 }
                 catch (RejectedExecutionException e)
                 {
-                    System.out.println("Capacità massima raggiunta");
+                    System.out.println("Impossibile accettare un nuovo client");
                 }
                 catch (IOException e)
                 {

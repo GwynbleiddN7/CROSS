@@ -1,18 +1,19 @@
-package Messages;
+package ClientToServer;
 
+import Utility.Operation;
 import Utility.OrderType;
 
 public class InsertMarketOrder extends MessageType{
-    public OrderType type;
-    public int size;
+    public final OrderType type;
+    public final int size;
     public InsertMarketOrder(OrderType type, int size)
     {
         this.type = type;
         this.size = size;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "insertMarketOrder";
+        return Operation.insertMarketOrder;
     }
 }

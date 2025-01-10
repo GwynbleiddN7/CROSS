@@ -1,4 +1,6 @@
-package Messages;
+package ServerToClient;
+
+import Orders.Trade;
 
 import java.util.List;
 

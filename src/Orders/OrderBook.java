@@ -1,6 +1,5 @@
 package Orders;
 
-import Messages.Trade;
 import Server.NotificationHandler;
 import Utility.*;
 import com.google.gson.Gson;
@@ -102,17 +101,8 @@ public class OrderBook {
 
     private int executeMarketOrder(Order order, boolean fromStopOrder)
     {
-        ArrayList<Trade> logs = new ArrayList<>(); //Users to notify
-
         try{
-            calculateMarketOrder(order, logs);
-
-            Trade log = new Trade(order.username, order.orderId, order.type, fromStopOrder ? OrderAction.stop : OrderAction.market, order.size, order.price, new Date().getTime());
-            logs.add(log);
-
-            NotificationHandler.Send(logs);
-            AddLogs(logs);
-
+            calculateMarketOrder(order, fromStopOrder);
             return order.orderId;
         }
         catch (OrderFailedException e)
@@ -121,8 +111,9 @@ public class OrderBook {
         }
     }
 
-    private void calculateMarketOrder(Order order, ArrayList<Trade> logs) throws OrderFailedException
+    private void calculateMarketOrder(Order order, boolean fromStopOrder) throws OrderFailedException
     {
+        ArrayList<Trade> logs = new ArrayList<>(); //Users to notify
         List<Order> ordersToInteract = new ArrayList<>();
         List<Order> ordersToRemove = new ArrayList<>();
         OrderType ordersType = order.type == OrderType.ask ? OrderType.bid : OrderType.ask;
@@ -143,29 +134,26 @@ public class OrderBook {
         for(Order interactionOrder : ordersToInteract)
         {
             int size = Math.min(interactionOrder.size, order.size);
-            order.price += size * interactionOrder.price;
-
-            Trade log = new Trade(interactionOrder.username, interactionOrder.orderId, interactionOrder.type, OrderAction.limit, size, size * interactionOrder.price, new Date().getTime());
-            logs.add(log); //Log for Notification and for JSON Dump
+            int price = size * interactionOrder.price;
+            logs.add(new Trade(interactionOrder.username, interactionOrder.orderId, interactionOrder.type, OrderAction.limit, size, price));
+            logs.add(new Trade(order.username, order.orderId, order.type, fromStopOrder ? OrderAction.stop : OrderAction.market, size, price));
 
             interactionOrder.size -= size;
+            order.size -= size;
         }
         limit.RemoveAll(ordersToRemove, ordersType);
+
+        NotificationHandler.Send(logs);
+        AddLogs(logs);
     }
 
     private int executeStopOrder(Order newOrder) {
         if(checkStopTrigger(newOrder))
-            return convertStopOrder(newOrder);
+            return executeMarketOrder(newOrder, true);
         else{
             stop.AddOrder(newOrder);
             return newOrder.orderId;
         }
-    }
-
-    private int convertStopOrder(Order newOrder)
-    {
-        newOrder.price = 0;
-        return executeMarketOrder(newOrder, true);
     }
 
     private void checkStopOrder()
@@ -177,7 +165,7 @@ public class OrderBook {
             {
                 if(checkStopTrigger(stopOrder))
                 {
-                    convertStopOrder(stopOrder);
+                    executeMarketOrder(stopOrder, true);
                     ordersToRemove.add(stopOrder);
                 }
             }
@@ -220,9 +208,9 @@ public class OrderBook {
     private void matchLimitOrders()
     {
         HashMap<OrderType, ArrayList<Order>> ordersToRemove = new HashMap<>();
-        ArrayList<Trade> logs = new ArrayList<>();
         ordersToRemove.put(OrderType.ask, new ArrayList<>());
         ordersToRemove.put(OrderType.bid, new ArrayList<>());
+        ArrayList<Trade> logs = new ArrayList<>();
 
         for(Order bidOrder : limit.get(OrderType.bid))
         {
@@ -259,7 +247,7 @@ public class OrderBook {
 
     private Trade createLimitLog(Order order, int size, int price)
     {
-        return new Trade(order.username, order.orderId, order.type, OrderAction.limit, size, size * price, new Date().getTime());
+        return new Trade(order.username, order.orderId, order.type, OrderAction.limit, size, size * price);
     }
 
     private void checkForUpdate()

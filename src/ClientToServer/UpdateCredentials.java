@@ -1,9 +1,11 @@
-package Messages;
+package ClientToServer;
+
+import Utility.Operation;
 
 public class UpdateCredentials extends MessageType{
-    public String username;
-    public String old_password;
-    public String new_password;
+    public final String username;
+    public final String old_password;
+    public final String new_password;
 
     public UpdateCredentials(String username, String old_password, String new_password)
     {
@@ -12,8 +14,8 @@ public class UpdateCredentials extends MessageType{
         this.new_password = new_password;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "updateCredentials";
+        return Operation.updateCredentials;
     }
 }

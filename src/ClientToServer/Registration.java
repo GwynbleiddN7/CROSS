@@ -1,16 +1,18 @@
-package Messages;
+package ClientToServer;
+
+import Utility.Operation;
 
 public class Registration extends MessageType{
-    public String username;
-    public String password;
+    public final String username;
+    public final String password;
     public Registration(String username, String password)
     {
         this.username = username;
         this.password = password;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "register";
+        return Operation.register;
     }
 }

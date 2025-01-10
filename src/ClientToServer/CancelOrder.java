@@ -1,14 +1,16 @@
-package Messages;
+package ClientToServer;
+
+import Utility.Operation;
 
 public class CancelOrder extends MessageType{
-    public int orderId;
+    public final int orderId;
     public CancelOrder(int orderId)
     {
         this.orderId = orderId;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "cancelOrder";
+        return Operation.cancelOrder;
     }
 }

@@ -1,14 +1,16 @@
-package Messages;
+package ClientToServer;
+
+import Utility.Operation;
 
 public class GetPriceHistory extends MessageType{
-    public String month;
+    public final String month;
     public GetPriceHistory(String month)
     {
         this.month = month;
     }
     @Override
-    public String getOperation()
+    public Operation getOperation()
     {
-        return "getPriceHistory";
+        return Operation.getPriceHistory;
     }
 }

@@ -1,19 +1,30 @@
 package Server;
 
-import Messages.*;
+import ClientToServer.*;
 import Orders.OrderBook;
+import ServerToClient.*;
+import Utility.Operation;
 import Utility.OrderAction;
 import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
 import java.io.*;
 import java.net.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.*;
 
 public class ClientHandler implements Runnable{
     private final Socket client;
     private final InetSocketAddress udpSocket;
-    private Credentials currentCredentials = null;
     private final OrderBook orderBook;
     private final DataOutputStream out;
     private final DataInputStream in;
+
+    private Credentials currentCredentials = null;
     public ClientHandler(Socket client, OrderBook orderBook) throws IOException {
         this.client = client;
         this.orderBook = orderBook;
@@ -39,8 +50,8 @@ public class ClientHandler implements Runnable{
                     int len = in.read(buff, 0, size);
 
                     String answer = new String(buff, 0, len);
-                    if(answer.equals("EXIT")) break;
                     String response = parseMessage(answer);
+                    if(response.equals("exit")) break;
 
                     out.writeInt(response.length());
                     out.writeBytes(response);
@@ -77,9 +88,12 @@ public class ClientHandler implements Runnable{
             int response;
             String errorMessage;
 
-            switch (operation)
+            switch (Operation.valueOf(operation))
             {
-                case "register" -> {
+                case Operation.exit -> {
+                    return "exit";
+                }
+                case Operation.register -> {
                     if (currentCredentials != null) response = 103;
                     else {
                         Registration registration = gson.fromJson(values, Registration.class);
@@ -93,9 +107,9 @@ public class ClientHandler implements Runnable{
                         case 103 -> "user currently logged in";
                         default -> "unknown error";
                     };
-                    responseMessage = new Response(response, errorMessage);
+                    responseMessage = new StandardResponse(response, errorMessage);
                 }
-                case "updateCredentials" -> {
+                case Operation.updateCredentials -> {
                     if(currentCredentials != null) response = 104;
                     else{
                         UpdateCredentials updateCredentials = gson.fromJson(values, UpdateCredentials.class);
@@ -110,9 +124,9 @@ public class ClientHandler implements Runnable{
                         case 104 -> "user currently logged in";
                         default -> "unknown error";
                     };
-                    responseMessage = new Response(response, errorMessage);
+                    responseMessage = new StandardResponse(response, errorMessage);
                 }
-                case "login" -> {
+                case Operation.login -> {
                     if(currentCredentials != null) response = 102;
                     else{
                         Login login = gson.fromJson(values, Login.class);
@@ -127,28 +141,21 @@ public class ClientHandler implements Runnable{
                         case 103 -> "error updating credentials file";
                         default -> "unknown error";
                     };
-                    responseMessage = new Response(response, errorMessage);
+                    responseMessage = new StandardResponse(response, errorMessage);
                 }
-                case "logout" -> {
-                    response = 101;
+                case Operation.logout -> {
+                    if(currentCredentials == null) response = 101;
+                    else  response = 100;
+                    currentCredentials = null;
+                    errorMessage = switch (response) {
+                        case 100 -> "OK";
+                        case 101 -> "user not logged in";
+                        default -> "unknown error";
+                    };
 
-                    if(currentCredentials == null) {
-                        responseMessage = new Response(response, "user not logged in");
-                        break;
-                    }
-
-                    Logout logout = gson.fromJson(values, Logout.class);
-                    if(!LoginHandler.CheckUsername(logout.username))  errorMessage = "username non existent";
-                    else if(!logout.username.equals(currentCredentials.username)) errorMessage = "username/connection mismatch";
-                    else {
-                        currentCredentials = null;
-                        response = 100;
-                        errorMessage = "OK";
-                    }
-
-                    responseMessage = new Response(response, errorMessage);
+                    responseMessage = new StandardResponse(response, errorMessage);
                 }
-                case "insertLimitOrder" -> {
+                case Operation.insertLimitOrder -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
@@ -157,7 +164,7 @@ public class ClientHandler implements Runnable{
                     int limitOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertLimitOrder.type, OrderAction.limit, insertLimitOrder.price, insertLimitOrder.size);
                     responseMessage = new OrderResponse(limitOrderId);
                 }
-                case "insertMarketOrder" -> {
+                case Operation.insertMarketOrder -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
@@ -166,7 +173,7 @@ public class ClientHandler implements Runnable{
                     int marketOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertMarketOrder.type, OrderAction.market, 0, insertMarketOrder.size);
                     responseMessage = new OrderResponse(marketOrderId);
                 }
-                case "insertStopOrder" -> {
+                case Operation.insertStopOrder -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
@@ -175,7 +182,7 @@ public class ClientHandler implements Runnable{
                     int stopOrderId = orderBook.InsertNewOrder(currentCredentials.username, insertStopOrder.type, OrderAction.stop, insertStopOrder.price, insertStopOrder.size);
                     responseMessage = new OrderResponse(stopOrderId);
                 }
-                case "cancelOrder" -> {
+                case Operation.cancelOrder -> {
                     if(currentCredentials == null) {
                         responseMessage = new OrderResponse(-1);
                         break;
@@ -188,24 +195,143 @@ public class ClientHandler implements Runnable{
                         case 102 -> "order belongs to a different user";
                         default -> "unknown error";
                     };
-                    responseMessage = new Response(Math.min(cancelledResult, 101), errorMessage);
+                    responseMessage = new StandardResponse(Math.min(cancelledResult, 101), errorMessage);
                 }
-                case "getPriceHistory" -> {
+                case Operation.getPriceHistory -> {
                     if(currentCredentials == null) {
-                        responseMessage = new OrderResponse(-1);
+                        responseMessage = new StandardResponse(101, "user not logged in");
                         break;
                     }
                     GetPriceHistory getPriceHistory = gson.fromJson(values, GetPriceHistory.class);
-                    responseMessage = new Response(101, "not yet implemented");
+                    boolean scanResult = handlePurchaseHistory(getPriceHistory);
+
+                    if(scanResult) responseMessage = new StandardResponse(100, "history scan complete");
+                    else responseMessage = new StandardResponse(102, "history scan failed");
                 }
-                default -> responseMessage = new Response(404, "command not found");
+                default -> responseMessage = new StandardResponse(404, "command not found");
             }
             return gson.toJson(responseMessage);
         }
-        catch (JsonSyntaxException e)
+        catch (IllegalArgumentException _)
         {
-            return gson.toJson(new Response(400, "bad request"));
+            return gson.toJson(new StandardResponse(404, "command not found"));
         }
+        catch (JsonSyntaxException _)
+        {
+            return gson.toJson(new StandardResponse(400, "bad request"));
+        }
+    }
+
+    private boolean handlePurchaseHistory(GetPriceHistory priceHistory) {
+        try {
+            DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                    .appendPattern("MMyyyy")
+                    .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+                    .toFormatter();
+            LocalDate date = LocalDate.parse(priceHistory.month, formatter);
+            LocalDateTime gmtDate = date.atStartOfDay();
+
+            long endingBound = Date.from(gmtDate.plusMonths(1).toInstant(ZoneOffset.UTC)).getTime();
+            long lowerBound = Date.from(gmtDate.toInstant(ZoneOffset.UTC)).getTime();
+            long upperBound = lowerBound;
+            long defaultTime = new Date().getTime();
+            int day = 0;
+
+            ArrayList<PriceHistory> prices = new ArrayList<>();
+            List<Thread> threads = new ArrayList<>();
+
+            JsonReader reader = new JsonReader(new FileReader("storicoOrdini.json"));
+            reader.beginObject();
+            while (reader.hasNext()){
+                String name = reader.nextName();
+                if ("trades".equals(name)){
+                    reader.beginArray();
+
+                    PriceHistory currentPrice = null;
+
+                    boolean done = false;
+                    while (reader.hasNext()){
+                        if(done) {
+                            reader.skipValue();
+                            continue;
+                        }
+                        reader.beginObject();
+                        int price = 0;
+                        long time = defaultTime;
+                        while (reader.hasNext()){
+                            String obj = reader.nextName();
+                            if ("price".equals(obj)) price = reader.nextInt();
+                            else if("timestamp".equals(obj)) time = reader.nextLong() * 1000;
+                            else reader.skipValue();
+                        }
+
+                        if(time >= lowerBound)
+                        {
+                            if(time < endingBound)
+                            {
+                                if(time >= upperBound)
+                                {
+                                    if(prices.size() == 8)
+                                    {
+                                        sendPriceHistory(prices, threads);
+                                        prices.clear();
+                                    }
+
+                                    day++;
+                                    lowerBound = upperBound;
+                                    gmtDate = gmtDate.plusDays(1);
+                                    upperBound = Date.from(gmtDate.toInstant(ZoneOffset.UTC)).getTime();
+
+                                    currentPrice = new PriceHistory();
+                                    currentPrice.day = day;
+                                    prices.add(currentPrice);
+                                }
+                                if(currentPrice != null)
+                                {
+                                    if(currentPrice.openingPrice == -1) currentPrice.openingPrice = price;
+                                    currentPrice.closingPrice = price;
+                                    currentPrice.maxPrice = Math.max(price, currentPrice.maxPrice);
+                                    currentPrice.minPrice = Math.min(price, currentPrice.minPrice);
+                                }
+                            }
+                        }
+                        reader.endObject();
+                        if(time >= endingBound) {
+                            sendPriceHistory(prices, threads);
+                            done = true;
+                        }
+                    }
+                    reader.endArray();
+                } else reader.skipValue();
+            }
+            reader.endObject();
+            reader.close();
+
+            for(Thread t : threads) t.join();
+        } catch (IOException | InterruptedException _) { return false; }
+        return true;
+    }
+
+    private void sendPriceHistory(ArrayList<PriceHistory> prices, List<Thread> threads)
+    {
+        if(prices.isEmpty()) return;
+        final PriceResponse priceResponse = new PriceResponse(new ArrayList<>(prices));
+        Thread thread = new Thread(() -> {
+            Gson gson = new Gson();
+            String msg = gson.toJson(priceResponse);
+            synchronized (out)
+            {
+                try {
+                    out.writeInt(msg.length());
+                    out.writeBytes(msg);
+                    out.flush();
+                } catch (IOException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        thread.start();
+        threads.add(thread);
     }
 
     public InetSocketAddress GetAddressIfLogged(String username)

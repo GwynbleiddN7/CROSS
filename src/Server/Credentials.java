@@ -2,7 +2,7 @@ package Server;
 
 public class Credentials
 {
-    public String username;
+    public final String username;
     public String password;
     public Credentials(String username, String password)
     {

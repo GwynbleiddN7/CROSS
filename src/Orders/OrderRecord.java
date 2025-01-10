@@ -1,10 +1,17 @@
 package Orders;
 
 import Utility.OrderType;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class OrderRecord extends ConcurrentHashMap<OrderType, List<Order>>{
+    public OrderRecord()
+    {
+        this.putIfAbsent(OrderType.ask, new ArrayList<>());
+        this.putIfAbsent(OrderType.bid, new ArrayList<>());
+    }
     public synchronized void AddOrder(Order newOrder)
     {
         int index = 0;
