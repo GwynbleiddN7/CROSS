@@ -1,7 +1,9 @@
 package ClientToServer;
+
 import Utility.Operation;
 import Utility.OrderType;
 
+//Messaggio Client->Server per l'inserimento di un limit order
 public class InsertLimitOrder extends MessageType{
     public final OrderType type;
     public final int size;

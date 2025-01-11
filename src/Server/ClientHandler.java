@@ -39,6 +39,7 @@ public class ClientHandler implements Runnable{
     }
 
     public void run() {
+        //Leggo la porta che il client ha scelto per ricevere i messaggi UDP (primo messaggio inviato nella socket TCP)
         try
         {
             while(true)

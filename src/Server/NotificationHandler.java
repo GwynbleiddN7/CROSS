@@ -8,36 +8,39 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
+//Classe che gestisce le notifiche da mandare tramite UDP
 public class NotificationHandler {
     public static void Send(ArrayList<Trade> trades)
     {
         ArrayList<String> usernames = new ArrayList<>();
 
-        //Find all users
+        //Trova tutti gli utenti che hanno completato un trade
         for(Trade trade: trades)
         {
             if(!usernames.contains(trade.username)) usernames.add(trade.username);
         }
 
-        //Group notification per user
+        //Raggruppa gli utenti per mandare le relative notifiche di trade
         for(String username: usernames)
         {
             InetSocketAddress address = ServerMain.GetClientAddressByUsername(username);
             if(address == null) continue; //Best-Effort
-            List<Trade> tradesPerUser = trades.stream().filter(order -> order.username.equals(username)).toList();
-            Notification notification = new Notification(tradesPerUser);
-            Send(notification, address);
+            List<Trade> tradesPerUser = trades.stream().filter(order -> order.username.equals(username)).toList(); //Trade relativi all'utente in questione
+            Notification notification = new Notification(tradesPerUser); //Crea una nuova notifica
+            SendDatagram(notification, address); //Manda la notifica all'utente
         }
     }
-    private static void Send(Notification notification, InetSocketAddress address)
+
+    //Funzione per mandare il datagram tramite UDP
+    private static void SendDatagram(Notification notification, InetSocketAddress address)
     {
         try(DatagramSocket socket = new DatagramSocket()){
             try{
                 Gson gson = new Gson();
-                String stringMessage = gson.toJson(notification);
+                String stringMessage = gson.toJson(notification); //Serializza la notifica
                 byte[] msg = stringMessage.getBytes();
-                DatagramPacket request = new DatagramPacket(msg, msg.length, address);
-                socket.send(request);
+                DatagramPacket request = new DatagramPacket(msg, msg.length, address); //Crea il datagram con la notifica
+                socket.send(request); //Manda il datagram tramite la socket
             }
             catch (IOException e) {
                 System.out.println("Errore di comunicazione con il server");

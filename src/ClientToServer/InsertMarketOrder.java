@@ -3,6 +3,7 @@ package ClientToServer;
 import Utility.Operation;
 import Utility.OrderType;
 
+//Messaggio Client->Server per l'inserimento di un market order
 public class InsertMarketOrder extends MessageType{
     public final OrderType type;
     public final int size;

@@ -1,9 +1,9 @@
 package Orders;
 
 import Utility.OrderType;
-
 import java.util.Date;
 
+//Informazioni degli ordini salvati nell'OrderBook
 public class Order {
     public final String username;
     public final int orderId;

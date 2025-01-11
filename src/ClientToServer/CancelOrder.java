@@ -2,6 +2,7 @@ package ClientToServer;
 
 import Utility.Operation;
 
+//Messaggio Client->Server per la cancellazione di un ordine
 public class CancelOrder extends MessageType{
     public final int orderId;
     public CancelOrder(int orderId)

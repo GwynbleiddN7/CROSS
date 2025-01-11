@@ -3,6 +3,7 @@ package ClientToServer;
 import Utility.Operation;
 import Utility.OrderType;
 
+//Messaggio Client->Server per l'inserimento di uno stop order
 public class InsertStopOrder extends MessageType{
     public final OrderType type;
     public final int size;

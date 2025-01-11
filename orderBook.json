@@ -1,0 +1,19 @@
+{
+  "stop": {
+    "ask": [],
+    "bid": []
+  },
+  "limit": {
+    "ask": [
+      {
+        "username": "ciao",
+        "orderId": 21,
+        "type": "ask",
+        "timestamp": 1736623938567,
+        "size": 4500,
+        "price": 50000
+      }
+    ],
+    "bid": []
+  }
+}

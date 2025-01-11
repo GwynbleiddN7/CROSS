@@ -2,14 +2,12 @@ package Utility;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 
 public class FileCreator {
-    public static boolean WriteToFile(String path, Object object)
+    public static boolean WriteToFile(String path, Object object) //Funzione per scrivere un oggetto JSON in un file e crearlo se non esiste
     {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String text = gson.toJson(object);

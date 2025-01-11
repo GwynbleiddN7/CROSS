@@ -2,6 +2,7 @@ package ClientToServer;
 
 import Utility.Operation;
 
+//Messaggio Client->Server per la registrazione di un utente
 public class Registration extends MessageType{
     public final String username;
     public final String password;

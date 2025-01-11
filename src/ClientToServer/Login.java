@@ -2,6 +2,7 @@ package ClientToServer;
 
 import Utility.Operation;
 
+//Messaggio Client->Server per il login di un utente
 public class Login extends MessageType{
     public final String username;
     public final String password;

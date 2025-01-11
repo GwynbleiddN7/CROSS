@@ -1,5 +1,6 @@
 package Server;
 
+//Struttura delle credenziali serializzate nel file credentials.json
 public class Credentials
 {
     public final String username;

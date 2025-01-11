@@ -1,5 +1,6 @@
 package ServerToClient;
 
+//Pacchetto dati incluso nella PriceResponse, con le informazioni della PriceHistory del giorno 'day'
 public class PriceHistory {
     public int day;
     public int openingPrice;
