@@ -64,16 +64,16 @@ public class ClientMain {
                 while (true) //Attendo la risposta dal server
                 {
                     //Leggo la risposta del server
-                    int size = in.readInt();
-                    byte[] buff = new byte[size];
-                    int len = in.read(buff, 0, size);
+                    int size = in.readInt(); //Leggo la lunghezza del messaggio che sta per arrivare
+                    byte[] buff = new byte[size]; //Alloco lo spazio necessario
+                    int len = in.read(buff, 0, size); //Leggo il messaggio dalla stream
                     String answer = new String(buff, 0, len); //La converto in testo
 
                     boolean endingMessage = parseOutput(answer); //Eseguo il parsing del messaggio
                     if(endingMessage) break; //Se era l'ultimo messaggio che stavo aspettando interrompo il ciclo
                 }
             }
-            //Interrompo le connessioni e chiudo le stream
+            //Interrompo la connessione e chiudo le stream
             notificationHandler.stopListener();
             out.close();
             in.close();
@@ -94,7 +94,7 @@ public class ClientMain {
             int paramNum = params.length;
             switch (Operation.valueOf(parts[0].trim())) //Controllo se il comando è una delle operazioni supportate (IllegalArgumentException altrimenti)
             {
-                //Per ogni operazione creo il relativo messaggio con i parametri corretti
+                //Per ogni operazione creo il relativo oggetto del messaggio con i parametri corretti
                 case Operation.exit:
                     if(paramNum != 0) throw new IncorrectParameterException();
                     return new Exit();
