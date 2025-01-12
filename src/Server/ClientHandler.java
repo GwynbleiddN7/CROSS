@@ -23,6 +23,7 @@ public class ClientHandler implements Runnable{
     private final OrderBook orderBook;
     private final DataOutputStream out;
     private final DataInputStream in;
+    private final String ordersHistoryPath = "Data/storicoOrdini.json";
     private Credentials currentCredentials = null;
 
     public ClientHandler(Socket client, OrderBook orderBook) throws IOException {
@@ -37,7 +38,7 @@ public class ClientHandler implements Runnable{
         int udpPort = in.readInt(); //Leggo la porta che il client ha scelto per ricevere i messaggi UDP (primo messaggio inviato nella socket TCP)
         this.udpSocket = new InetSocketAddress(this.client.getInetAddress(), udpPort); //Creo la socket UDP su cui verranno inviate le notifiche asincrone al client
 
-        this.client.setSoTimeout(1000 * 5 * 60); //Imposto un timeout di 5 minuti per eseguire il logout per inattività
+        this.client.setSoTimeout(1000 * ServerMain.timeout); //Imposto un timeout in secondi (default 5 minuti) per eseguire il logout per inattività
     }
 
     //Funzione asincrona che si occupa di gestire la connessione con un client
@@ -265,7 +266,7 @@ public class ClientHandler implements Runnable{
             List<Thread> threads = new ArrayList<>(); //Lista dei thread che si occuperanno di mandare al client blocchi di priceHistory
 
             //Leggo come stream il file dello storico ordini (data la grandezza del file non lo salvo tutto insieme in memoria)
-            JsonReader reader = new JsonReader(new FileReader("storicoOrdini.json"));
+            JsonReader reader = new JsonReader(new FileReader(ordersHistoryPath));
             reader.beginObject();
             while (reader.hasNext()){
                 String name = reader.nextName();

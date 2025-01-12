@@ -18,6 +18,7 @@ public class ServerMain {
     private static final String configFile = "server.properties";
     private static int tcp_port;
     public static int udp_port;
+    public static int timeout;
 
     public static void main(String[] args) {
         try {
@@ -49,8 +50,7 @@ public class ServerMain {
                 }
                 catch (IOException e)
                 {
-                    System.out.println("Errore nella connessione con il client");
-                    break;
+                    System.out.println("Errore nella connessione con un client");
                 }
             }
         } catch (IOException e) {
@@ -67,6 +67,7 @@ public class ServerMain {
         prop.load(input);
         tcp_port = Integer.parseInt(prop.getProperty("TCP_port"));
         udp_port = Integer.parseInt(prop.getProperty("UDP_port"));
+        timeout = Integer.parseInt(prop.getProperty("timeout"));
         input.close();
     }
 

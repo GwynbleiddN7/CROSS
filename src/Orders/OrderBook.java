@@ -12,8 +12,8 @@ import java.util.*;
 public class OrderBook {
     private OrderRecord stop; //Campo serializzato degli stop order
     private OrderRecord limit; //Campo serializzato dei limit order
-    private static final String logsFile = "ordersLog.json";
-    private static final String orderBookFile = "orderBook.json";
+    private static final String logsFile = "Data/ordersLog.json";
+    private static final String orderBookFile = "Data/orderBook.json";
     private transient int maxId = -1; //Prossimo id da dare a un ordine, inizializzato a -1
     private transient List<Trade> logs; //Lista dei log delle transazioni usata per tenere traccia degli orderId e per loggare le transazioni
 

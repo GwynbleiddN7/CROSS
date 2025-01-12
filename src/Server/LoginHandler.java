@@ -10,7 +10,7 @@ import java.util.List;
 //Classe per gestire i login degli utenti
 public class LoginHandler {
     private static List<Credentials> credentials; //Lista serializzata delle credenziali degli utenti
-    private static final String pathFile = "credentials.json";
+    private static final String pathFile = "Data/credentials.json";
 
     //Funzione per caricare i dati dal file o per inizializzare la lista in caso il file non esista o abbia una sintassi errata
     public static void LoadData()

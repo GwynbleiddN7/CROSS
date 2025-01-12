@@ -10,6 +10,7 @@ import Utility.OrderType;
 import Utility.IncorrectParameterException;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import com.google.gson.*;
@@ -32,26 +33,32 @@ public class ClientMain {
             return;
         }
 
-        try(Socket socket = new Socket(host, tcp_port)) //Creo la socket TCP
+        NotificationHandler notificationHandler;
+        try {
+            notificationHandler = new NotificationHandler(); //Inizializzo il servizio di notifiche
+        } catch (SocketException e) {
+            System.out.println("Impossibile avviare il servizio di notifiche");
+            return;
+        }
+
+        try (Socket socket = new Socket(host, tcp_port)) //Creo la socket TCP
         {
             //Inizializzo gli stream di lettura e scrittura della socket
             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
 
-            NotificationHandler notificationHandler = new NotificationHandler(); //Creo l'oggetto che si occupa di ricevere i datagram UDP asincroni
             out.writeInt(notificationHandler.GetPort()); //Comunico al server la porta su cui il client desidera ricevere i datagram UDP
 
             Thread notificationThread = new Thread(notificationHandler);
             notificationThread.start(); //Avvio il servizio di ricezione notifiche
 
             System.out.println("Inserisci un comando [format: cmd(param1, param2, ...)]");
-            while(true)
-            {
+            while (true) {
                 System.out.print(">");
                 String input = console.nextLine(); //Leggo l'input dell'utente
 
                 MessageType msg = parseInput(input); //Converto l'input in un messaggio valido da mandare al server
-                if(msg == null) continue; //Se il messaggio non è valido ignoro il resto
+                if (msg == null) continue; //Se il messaggio non è valido ignoro il resto
 
                 Message<MessageType> message = new Message<>(msg); //Trasformo il messaggio nel formato da mandare al server con tutte le informazioni relative
                 String stringMessage = gson.toJson(message); //Serializzo il messaggio
@@ -59,7 +66,7 @@ public class ClientMain {
                 out.writeBytes(stringMessage); //Invio il messaggio effettivo
                 out.flush();
 
-                if(msg.getOperation() == Operation.exit) break; //Operazione che termina la connessione
+                if (msg.getOperation() == Operation.exit) break; //Operazione che termina la connessione
 
                 while (true) //Attendo la risposta dal server
                 {
@@ -70,15 +77,17 @@ public class ClientMain {
                     String answer = new String(buff, 0, len); //La converto in testo
 
                     boolean endingMessage = parseOutput(answer); //Eseguo il parsing del messaggio
-                    if(endingMessage) break; //Se era l'ultimo messaggio che stavo aspettando interrompo il ciclo
+                    if (endingMessage) break; //Se era l'ultimo messaggio che stavo aspettando interrompo il ciclo
                 }
             }
             //Interrompo la connessione e chiudo le stream
-            notificationHandler.stopListener();
             out.close();
             in.close();
         } catch (IOException e) {
-            System.out.println("Impossibile connettersi al server o avviare il servizio di notifiche");
+            System.out.println("Impossibile connettersi al server");
+        }
+        finally {
+            notificationHandler.stopListener(); //Interrompo il servizio di notifiche
         }
     }
 
