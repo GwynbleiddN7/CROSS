@@ -52,8 +52,7 @@ public class NotificationHandler implements Runnable{
     {
         for(Trade trade : notification.trades)
         {
-            //Divido per 1000.f per mostrare all'utente i valori effettivi della transazione
-            System.out.printf("[Notifica ordine %d di tipo %s: hai %s %.4f BTC per un totale di %.2f USD]\n>", trade.orderId, trade.orderType, trade.type == OrderType.ask ? "venduto" : "acquistato", trade.size/1000.f, trade.price/1000.f);
+            System.out.printf("[Notifica ordine %d di tipo %s: hai %s %.4f BTC per un totale di %.2f USD]\n>", trade.orderId, trade.orderType, trade.type == OrderType.ask ? "venduto" : "acquistato", trade.size, trade.price);
         }
     }
 }

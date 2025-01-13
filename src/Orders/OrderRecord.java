@@ -7,10 +7,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 //Classe che rappresenta lista di ordini di tipo ask e liste di ordini di tipo bid, utilizzata nell'orderBook per suddividere ordini limit e stop
 public class OrderRecord extends ConcurrentHashMap<OrderType, List<Order>>{
-    public OrderRecord()
+    //Funzione che crea dei record vuoti
+    public static OrderRecord CreateEmptyOrderRecord()
     {
-        this.putIfAbsent(OrderType.ask, new ArrayList<>());
-        this.putIfAbsent(OrderType.bid, new ArrayList<>());
+        OrderRecord record = new OrderRecord();
+        record.put(OrderType.ask, new ArrayList<>());
+        record.put(OrderType.bid, new ArrayList<>());
+        return record;
     }
 
     //Funzione sincronizzata, utilizzata per aggiungere un nuovo ordine all'orderBook

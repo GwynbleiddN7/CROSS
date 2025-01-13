@@ -10,10 +10,10 @@ public class Trade {
     public final int orderId;
     public final OrderType type;
     public final OrderAction orderType;
-    public final int size;
-    public final int price;
+    public final double size;
+    public final double price;
     public final long timestamp;
-    public Trade(String username, int orderId, OrderType type, OrderAction orderType, int size, int price)
+    public Trade(String username, int orderId, OrderType type, OrderAction orderType, double size, double price)
     {
         this.username = username;
         this.orderId = orderId;

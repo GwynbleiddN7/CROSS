@@ -52,6 +52,8 @@ public class ClientMain {
             Thread notificationThread = new Thread(notificationHandler);
             notificationThread.start(); //Avvio il servizio di ricezione notifiche
 
+            System.out.println("Connessione con il server effettuata");
+            System.out.println("Esegui il login! Se non hai un account puoi registrarti con il comando register(username, password)");
             System.out.println("Inserisci un comando [format: cmd(param1, param2, ...)]");
             while (true) {
                 System.out.print(">");

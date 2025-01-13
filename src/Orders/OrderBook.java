@@ -39,13 +39,12 @@ public class OrderBook {
         try{
             Gson gson = new Gson();
             OrderBook savedBook = gson.fromJson(new FileReader(orderBookFile), OrderBook.class);
-
             stop = savedBook.stop;
             limit = savedBook.limit;
 
         } catch (Exception e) {
-            stop = new OrderRecord();
-            limit = new OrderRecord();
+            stop = OrderRecord.CreateEmptyOrderRecord();
+            limit = OrderRecord.CreateEmptyOrderRecord();
         }
     }
 
@@ -136,11 +135,11 @@ public class OrderBook {
         for(Order interactionOrder : ordersToInteract)
         {
             int size = Math.min(interactionOrder.size, order.size); //Quantità dell'ordine nel matching attuale
-            int price = size * interactionOrder.price; //Prezzo a cui viene eseguito il market order è quello dell'ordine nell'orderBook
+            double price = ((double) size / 1000.f) * ((double) interactionOrder.price / 1000.f); //Prezzo a cui viene eseguito il market order è quello dell'ordine nell'orderBook (prezzo effettivo, divido per 1000)
 
-            //Aggiungo ai log le nuove transazioni
-            logs.add(new Trade(interactionOrder.username, interactionOrder.orderId, interactionOrder.type, OrderAction.limit, size, price));
-            logs.add(new Trade(order.username, order.orderId, order.type, fromStopOrder ? OrderAction.stop : OrderAction.market, size, price));
+            //Aggiungo ai log le nuove transazioni (divido per 1000 per inviare i dati effettivi)
+            logs.add(new Trade(interactionOrder.username, interactionOrder.orderId, interactionOrder.type, OrderAction.limit, (double) size / 1000.f, price));
+            logs.add(new Trade(order.username, order.orderId, order.type, fromStopOrder ? OrderAction.stop : OrderAction.market, (double) size / 1000.f, price));
 
             //Aggiorno gli ordini
             interactionOrder.size -= size;
@@ -265,10 +264,10 @@ public class OrderBook {
         AddLogs(logs);
     }
 
-    //Funzione per creare i log per i limit order conclusi o parzialmente eseguiti
+    //Funzione per creare i log per i limit order conclusi o parzialmente eseguiti (divido per 1000 per creare i log effettivi)
     private Trade createLimitLog(Order order, int size, int price)
     {
-        return new Trade(order.username, order.orderId, order.type, OrderAction.limit, size, size * price);
+        return new Trade(order.username, order.orderId, order.type, OrderAction.limit, (double) size / 1000.f, ((double) size / 1000.f) * ((double) price / 1000.f));
     }
 
     //Funzione che controlla se ci sono stop order da attivare, successivamente se ci sono limit order da matchare e infine ricontrolla eventuali stop order da attivare
