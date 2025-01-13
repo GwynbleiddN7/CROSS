@@ -283,12 +283,12 @@ public class ClientHandler implements Runnable{
                         }
                         reader.beginObject();
                         //Inizializzo le variabili temporanee con valori di default
-                        int price = 0;
+                        double price = 0;
                         long time = defaultTime;
 
                         while (reader.hasNext()){
                             String obj = reader.nextName();
-                            if ("price".equals(obj)) price = reader.nextInt(); //Salvo temporaneamente il prezzo letto
+                            if ("price".equals(obj)) price = reader.nextInt() / 1000.f; //Salvo temporaneamente il prezzo letto (divido per 1000 per trasformare il prezzo nel valore effettivo)
                             else if("timestamp".equals(obj)) time = reader.nextLong() * 1000; //Salvo temporaneamente il timestamp letto (*1000 perché il timestamp letto da Java ha ulteriori 3 cifre finali poste a 0 rispetto a quelle del file)
                             else reader.skipValue(); //Gli altri campi non mi interessano quindi evito di salvarli e occupare memoria inutilmente
                         }

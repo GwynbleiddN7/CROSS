@@ -12,11 +12,9 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.*;
+
 import com.google.gson.*;
-import java.util.Properties;
-import java.util.Scanner;
-import java.util.TimeZone;
 
 public class ClientMain {
     private static final String configFile = "client.properties";
@@ -97,12 +95,16 @@ public class ClientMain {
     private static MessageType parseInput(String input)
     {
         String[] parts = input.split("\\("); //Divido da dove iniziano i parametri del comando
-        if(parts.length == 0) return null; //Se l'input è vuoto ritorno null
+        if(parts.length == 0 || input.isEmpty()) return null; //Se l'input è vuoto ritorno null
         try{
+            //Operazioni di parsing e controllo dell'input
+            if(parts.length > 1 && !parts[parts.length-1].contains(")")) throw new IncorrectParameterException();
+            if(input.contains("(") && parts.length == 1) throw new IncorrectParameterException();
             String[] params = new String[0];
             //Rimuovo tutti i caratteri extra e divido per il delimitatore ',' per avere l'elenco dei parametri
             if(parts.length > 1) params = parts[1].replace(")", "").replace(", ", ",").trim().split(",");
             int paramNum = params.length;
+            if(parts.length > 1 && params[0].isEmpty()) paramNum--; //Per consentire comandi come exit() o logout() con zero parametri
             switch (Operation.valueOf(parts[0].trim())) //Controllo se il comando è una delle operazioni supportate (IllegalArgumentException altrimenti)
             {
                 //Per ogni operazione creo il relativo oggetto del messaggio con i parametri corretti
@@ -174,7 +176,7 @@ public class ClientMain {
             PriceResponse priceResponse = gson.fromJson(answer, PriceResponse.class); //De-serializzo in PriceResponse
             for(PriceHistory history: priceResponse.data) //Leggo le PriceHistory dei giorni che ho ricevuto (max 8)
             {
-                System.out.printf("Day %d: opening: %.2f USD, closing: %.2f USD, max: %.2f USD, min: %.2f USD\n", history.day, history.openingPrice / 1000.f, history.closingPrice / 1000.f, history.maxPrice / 1000.f, history.minPrice / 1000.f);
+                System.out.printf("Day %d: opening: %.2f USD, closing: %.2f USD, max: %.2f USD, min: %.2f USD\n", history.day, history.openingPrice, history.closingPrice, history.maxPrice, history.minPrice);
             }
             return false; //Le PriceResponse non sono mai l'ultimo messaggio (si concludono con una Standard Response con codice di successo o di errore)
         }
