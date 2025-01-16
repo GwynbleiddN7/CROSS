@@ -50,11 +50,11 @@ public class ServerMain {
                 }
                 catch (IOException e)
                 {
-                    System.out.println("Errore nella connessione con un client");
+                    System.out.println("Errore nella connessione con uno dei client");
                 }
             }
         } catch (IOException e) {
-            System.out.println("Errore nella gestione del socket");
+            System.out.println("Errore nella gestione del socket TCP");
         }
     }
 

@@ -76,7 +76,7 @@ public class ClientHandler implements Runnable{
         }
         catch (IOException _)
         {
-            System.out.println("Errore nella comunicazione con il client");
+            System.out.println("Connessione con uno dei client interrotta");
         }
         finally {
             currentCredentials = null; //Eseguo il logout per sicurezza

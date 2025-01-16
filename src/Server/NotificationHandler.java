@@ -43,10 +43,10 @@ public class NotificationHandler {
                 socket.send(request); //Manda il datagram tramite la socket
             }
             catch (IOException e) {
-                System.out.println("Errore di comunicazione con il server");
+                System.out.println("Errore di comunicazione UDP");
             }
         } catch (SocketException e) {
-            System.out.println("Errore nella gestione del socket");
+            System.out.println("Errore nella gestione del socket UDP");
         }
     }
 }

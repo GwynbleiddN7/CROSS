@@ -10,7 +10,6 @@ public enum Operation {
     insertStopOrder,
     login,
     logout,
-    message,
     register,
     updateCredentials
 }

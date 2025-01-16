@@ -7,7 +7,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class FileCreator {
-    public static boolean WriteToFile(String path, Object object) //Funzione per scrivere un oggetto JSON in un file e crearlo se non esiste
+    //Funzione per scrivere un oggetto JSON in un file e crearlo se non esiste
+    public static boolean WriteToFile(String path, Object object)
     {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String text = gson.toJson(object);

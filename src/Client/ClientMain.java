@@ -51,7 +51,8 @@ public class ClientMain {
             notificationThread.start(); //Avvio il servizio di ricezione notifiche
 
             System.out.println("Connessione con il server effettuata");
-            System.out.println("Esegui il login! Se non hai un account puoi registrarti con il comando register(username, password)");
+            System.out.println("Esegui il login! Se non hai un account puoi prima registrarti con il comando register(username, password)");
+            System.out.println("Per motivi di sicurezza, verrà eseguito il logout automatico se rimani inattivo per alcuni minuti");
             System.out.println("Inserisci un comando [format: cmd(param1, param2, ...)]");
             while (true) {
                 System.out.print(">");
@@ -180,7 +181,8 @@ public class ClientMain {
             }
             return false; //Le PriceResponse non sono mai l'ultimo messaggio (si concludono con una Standard Response con codice di successo o di errore)
         }
-        else if(element.getAsJsonObject().get("orderId") != null) //Se contiene un campo 'orderId', allora la risposta è una OrderResponse
+        System.out.printf("RAW MESSAGE: [%s]\n", answer); //Stampo il testo RAW a scopo informativo per il progetto
+        if(element.getAsJsonObject().get("orderId") != null) //Se contiene un campo 'orderId', allora la risposta è una OrderResponse
         {
             OrderResponse orderResponse = gson.fromJson(answer, OrderResponse.class); //De-serializzo in OrderResponse
             //Comunico all'utente l'esito dell'ordine
@@ -192,7 +194,6 @@ public class ClientMain {
             StandardResponse responseMessage = gson.fromJson(answer, StandardResponse.class); //De-serializzo in StandardResponse
             System.out.printf("Risposta %d: %s\n", responseMessage.response, responseMessage.errorMessage); //Comunico la risposta all'utente
         }
-        System.out.printf("RAW MESSAGE: [%s]\n", answer); //Stampo il testo RAW a scopo informativo per il progetto
         return true;
     }
 
