@@ -4,7 +4,7 @@ University "Laboratory III" Project written in Java
 
 ## Documentation
 
-[Relazione PDF](https://github.com/GwynbleiddN7/CROSS/blob/main/Relazione.pdf)
+[Relazione PDF](Relazione.pdf)
 
 ## License
 
